@@ -6,6 +6,7 @@ import {
 } from './location';
 import { copyToClipboard } from './clipboard';
 import { navigateKakao, navigateNaver, navigateTmap } from './navigation';
+import { sendFeedback } from './feedback';
 
 interface Store {
   id: number;
@@ -16,8 +17,24 @@ interface Store {
   lng: number;
 }
 
-const HEADER_HEIGHT = 78;
+const HEADER_HEIGHT = 96;
 const FOOTER_HEIGHT = 52;
+type View = 'map' | 'feedback';
+
+const ADMIN_CODE = import.meta.env.VITE_ADMIN_CODE ?? '';
+const FORMSPREE_DASHBOARD = 'https://formspree.io/forms';
+
+// URL의 ?admin=값 이 ADMIN_CODE 와 같으면 관리자 모드.
+function checkIsAdmin(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (!ADMIN_CODE) return false;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('admin') === ADMIN_CODE;
+  } catch {
+    return false;
+  }
+}
 const CLIENT_ID = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
 
 const NAVER_MAPS_SRC = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${CLIENT_ID}`;
@@ -184,6 +201,241 @@ function escapeHtml(s: string) {
     .replace(/'/g, '&#39;');
 }
 
+// 제보 화면. 제목(선택) + 본문(필수) + [취소][완료] 버튼.
+function FeedbackView({
+  onClose,
+  onShowToast,
+}: {
+  onClose: () => void;
+  onShowToast: (msg: string) => void;
+}) {
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const trimmedBody = body.trim();
+  const canSubmit = trimmedBody.length > 0 && !submitting;
+
+  const handleSubmit = async () => {
+    if (!trimmedBody) {
+      onShowToast('내용을 입력해주세요');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await sendFeedback({ title, body: trimmedBody });
+      onShowToast('제보가 접수됐어요. 감사합니다!');
+      onClose();
+    } catch (err) {
+      console.error(err);
+      onShowToast('전송에 실패했어요. 잠시 후 다시 시도해주세요');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: '#fff',
+        display: 'flex',
+        flexDirection: 'column',
+        zIndex: 100,
+      }}
+    >
+      {/* 헤더 */}
+      <div
+        style={{
+          height: 52,
+          padding: '0 12px 0 4px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottom: '1px solid #f0f0f3',
+          flexShrink: 0,
+        }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="닫기"
+          style={{
+            width: 44,
+            height: 44,
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 0,
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M15 5l-7 7 7 7"
+              stroke="#191f28"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+        <div style={{ fontSize: 16, fontWeight: 700, color: '#191f28' }}>
+          제보하기
+        </div>
+        <div style={{ width: 44 }} />
+      </div>
+
+      {/* 본문 입력 영역 */}
+      <div
+        style={{
+          flex: 1,
+          padding: '20px',
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
+        }}
+      >
+        <div>
+          <label
+            htmlFor="feedback-title"
+            style={{
+              display: 'block',
+              fontSize: 13,
+              color: '#4e5968',
+              fontWeight: 600,
+              marginBottom: 6,
+            }}
+          >
+            제목{' '}
+            <span style={{ color: '#8b95a1', fontWeight: 500 }}>(선택)</span>
+          </label>
+          <input
+            id="feedback-title"
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="예: 폐업한 판매점이 보여요"
+            maxLength={100}
+            style={{
+              width: '100%',
+              padding: '12px 14px',
+              border: '1px solid #e5e8ec',
+              borderRadius: 10,
+              fontSize: 15,
+              outline: 'none',
+              fontFamily: 'inherit',
+              background: '#fff',
+              color: '#191f28',
+            }}
+          />
+        </div>
+
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <label
+            htmlFor="feedback-body"
+            style={{
+              display: 'block',
+              fontSize: 13,
+              color: '#4e5968',
+              fontWeight: 600,
+              marginBottom: 6,
+            }}
+          >
+            내용 <span style={{ color: '#f04438', fontWeight: 500 }}>*</span>
+          </label>
+          <textarea
+            id="feedback-body"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="잘못된 정보, 폐업한 판매점, 개선 의견 등 자유롭게 적어주세요."
+            maxLength={2000}
+            style={{
+              flex: 1,
+              minHeight: 200,
+              padding: '12px 14px',
+              border: '1px solid #e5e8ec',
+              borderRadius: 10,
+              fontSize: 15,
+              lineHeight: 1.5,
+              outline: 'none',
+              fontFamily: 'inherit',
+              background: '#fff',
+              color: '#191f28',
+              resize: 'none',
+            }}
+          />
+          <div
+            style={{
+              alignSelf: 'flex-end',
+              marginTop: 6,
+              fontSize: 12,
+              color: '#8b95a1',
+            }}
+          >
+            {body.length} / 2000
+          </div>
+        </div>
+      </div>
+
+      {/* 하단 버튼 */}
+      <div
+        style={{
+          padding: '12px 16px 20px',
+          display: 'flex',
+          gap: 8,
+          borderTop: '1px solid #f0f0f3',
+          background: '#fff',
+        }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            flex: 1,
+            height: 52,
+            border: 'none',
+            borderRadius: 12,
+            background: '#f2f4f6',
+            color: '#4e5968',
+            fontSize: 16,
+            fontWeight: 700,
+            cursor: 'pointer',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          취소
+        </button>
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={!canSubmit}
+          style={{
+            flex: 2,
+            height: 52,
+            border: 'none',
+            borderRadius: 12,
+            background: canSubmit ? '#3182f6' : '#c6d3e1',
+            color: '#fff',
+            fontSize: 16,
+            fontWeight: 700,
+            cursor: canSubmit ? 'pointer' : 'not-allowed',
+            transition: 'background 0.15s',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          {submitting ? '전송 중...' : '완료'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // 길찾기 버튼 정의. icon은 public/icons/ 에 저장된 PNG 경로.
 // PNG 파일이 없으면 onerror로 회색 박스 fallback.
 const MAP_APPS = [
@@ -221,6 +473,7 @@ function createStoreInfoElement(
               data-app="${app.key}"
               aria-label="${app.label}에서 길찾기"
               style="
+                position:relative;
                 flex:1;
                 display:flex;
                 flex-direction:column;
@@ -343,6 +596,9 @@ export default function App() {
   const [lastUpdated, setLastUpdated] = useState<string>('');
   const [storesError, setStoresError] = useState('');
   const [regionFilter, setRegionFilter] = useState<string>('전체');
+
+  const [view, setView] = useState<View>('map');
+  const isAdmin = useMemo(() => checkIsAdmin(), []);
 
   const [toastMessage, setToastMessage] = useState('');
   const toastTimerRef = useRef<number | null>(null);
@@ -636,6 +892,16 @@ export default function App() {
         .store-address:active  { color: #3182f6 !important; }
         .store-nav-btn:active  { background: #f2f4f6 !important; transform: scale(0.95); }
         .store-nav-btn         { transition: transform 0.1s ease-out; }
+        /* 버튼 사이 세로 격자 (마지막 버튼 제외) */
+        .store-nav-btn:not(:last-child)::after {
+          content: '';
+          position: absolute;
+          top: 12px;
+          bottom: 12px;
+          right: -3px;
+          width: 1px;
+          background: #e5e8ec;
+        }
         .region-select {
           appearance: none;
           -webkit-appearance: none;
@@ -653,6 +919,15 @@ export default function App() {
         }
       `}</style>
 
+      {view === 'feedback' && (
+        <FeedbackView
+          onClose={() => setView('map')}
+          onShowToast={showToast}
+        />
+      )}
+
+      {view === 'map' && (<>
+
       {/* 헤더 */}
       <div
         style={{
@@ -661,12 +936,19 @@ export default function App() {
           borderBottom: '1px solid #f0f0f3',
           padding: '12px 20px',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
+          flexDirection: 'column',
+          gap: 4,
         }}
       >
-        <div style={{ minWidth: 0 }}>
+        {/* 첫 줄: 타이틀 + 제보하기 버튼 */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}
+        >
           <div
             style={{
               fontSize: 18,
@@ -677,14 +959,71 @@ export default function App() {
           >
             🏪 스포츠토토 판매점
           </div>
+          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+            {isAdmin && (
+              <a
+                href={FORMSPREE_DASHBOARD}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="제보 목록 보기 (관리자)"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  background: '#fff3cd',
+                  color: '#856404',
+                  padding: '6px 10px',
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap',
+                  border: '1px solid #ffeeba',
+                }}
+              >
+                👑 제보 보기
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={() => setView('feedback')}
+              style={{
+                border: 'none',
+                background: '#eef2ff',
+                color: '#3b5bdb',
+                padding: '6px 12px',
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              제보하기
+            </button>
+          </div>
+        </div>
+
+        {/* 두 번째 줄: 업데이트 정보 + 지역 셀렉트 */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            minHeight: 28,
+          }}
+        >
           <div
             style={{
               fontSize: 12,
               color: '#8b95a1',
-              marginTop: 4,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
+              flex: 1,
+              minWidth: 0,
             }}
           >
             전국 {stores.length.toLocaleString()}개
@@ -695,18 +1034,18 @@ export default function App() {
               </>
             )}
           </div>
+          <select
+            className="region-select"
+            value={regionFilter}
+            onChange={(e) => setRegionFilter(e.target.value)}
+          >
+            {regions.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
         </div>
-        <select
-          className="region-select"
-          value={regionFilter}
-          onChange={(e) => setRegionFilter(e.target.value)}
-        >
-          {regions.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
       </div>
 
       {/* 지도 */}
@@ -861,6 +1200,8 @@ export default function App() {
             : `${regionFilter} ${visibleStores.length.toLocaleString()}개 표시 중`}
         </span>
       </div>
+
+      </>)}
 
       {/* 토스트 */}
       {toastMessage && (

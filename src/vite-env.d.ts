@@ -7,6 +7,8 @@ declare module "*.css" {
 
 interface ImportMetaEnv {
   readonly VITE_NAVER_MAP_CLIENT_ID: string;
+  readonly VITE_FORMSPREE_ENDPOINT?: string;
+  readonly VITE_ADMIN_CODE?: string;
 }
 
 interface ImportMeta {
