@@ -5,7 +5,7 @@ import {
   type LatLng,
 } from './location';
 import { copyToClipboard } from './clipboard';
-import { navigateGoogle, navigateKakao, navigateNaver } from './navigation';
+import { navigateKakao, navigateNaver, navigateTmap } from './navigation';
 
 interface Store {
   id: number;
@@ -184,13 +184,16 @@ function escapeHtml(s: string) {
     .replace(/'/g, '&#39;');
 }
 
-// 길찾기 버튼 색상 매핑
+// 길찾기 버튼 정의. icon은 public/icons/ 에 저장된 PNG 경로.
+// PNG 파일이 없으면 onerror로 회색 박스 fallback.
 const MAP_APPS = [
-  { key: 'naver', label: '네이버 지도', color: '#03c75a' },
-  { key: 'kakao', label: '카카오맵', color: '#ffe812' },
-  { key: 'google', label: '구글 맵', color: '#4285f4' },
+  { key: 'tmap', label: '티맵', iconSrc: '/icons/tmap.png' },
+  { key: 'naver', label: '네이버 지도', iconSrc: '/icons/naver-map.png' },
+  { key: 'kakao', label: '카카오맵', iconSrc: '/icons/kakao-map.png' },
 ] as const;
 type MapAppKey = (typeof MAP_APPS)[number]['key'];
+
+const APP_ICON_SIZE = 36;
 
 // 가맹점 InfoWindow 콘텐츠를 HTMLElement로 생성.
 function createStoreInfoElement(
@@ -222,23 +225,25 @@ function createStoreInfoElement(
                 display:flex;
                 flex-direction:column;
                 align-items:center;
-                gap:4px;
+                gap:6px;
                 padding:8px 4px;
-                background:#f9fafb;
+                background:#fff;
                 border:none;
                 border-radius:10px;
                 cursor:pointer;
                 -webkit-tap-highlight-color:transparent;
               ">
-        <span style="
-          width:28px;height:28px;
-          border-radius:50%;
-          background:${app.color};
-          color:${app.key === 'kakao' ? '#191f28' : '#fff'};
-          display:flex;align-items:center;justify-content:center;
-          font-size:13px;font-weight:800;
-          letter-spacing:-0.5px;
-        ">${app.label.charAt(0)}</span>
+        <img src="${app.iconSrc}"
+             width="${APP_ICON_SIZE}"
+             height="${APP_ICON_SIZE}"
+             alt=""
+             style="
+               border-radius:8px;
+               display:block;
+               background:#f2f4f6;
+               object-fit:cover;
+             "
+             onerror="this.style.opacity='0'" />
         <span style="font-size:11px;color:#4e5968;font-weight:600;white-space:nowrap;">
           ${app.label}
         </span>
@@ -519,9 +524,9 @@ export default function App() {
               name: store.name,
               address: store.address,
             };
-            if (app === 'naver') void navigateNaver(dest);
+            if (app === 'tmap') void navigateTmap(dest);
+            else if (app === 'naver') void navigateNaver(dest);
             else if (app === 'kakao') void navigateKakao(dest);
-            else if (app === 'google') void navigateGoogle(dest);
           },
         });
         (
@@ -629,8 +634,8 @@ export default function App() {
         }
         .store-copy-btn:active { background: #e5e8ec !important; }
         .store-address:active  { color: #3182f6 !important; }
-        .store-nav-btn:active  { background: #eef0f3 !important; transform: scale(0.97); }
-        .store-nav-btn        { transition: transform 0.1s ease-out; }
+        .store-nav-btn:active  { background: #f2f4f6 !important; transform: scale(0.95); }
+        .store-nav-btn         { transition: transform 0.1s ease-out; }
         .region-select {
           appearance: none;
           -webkit-appearance: none;
