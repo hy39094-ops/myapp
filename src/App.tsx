@@ -7,6 +7,9 @@ import {
 import { copyToClipboard } from './clipboard';
 import { navigateKakao, navigateNaver, navigateTmap } from './navigation';
 import { sendFeedback } from './feedback';
+import { shareMiniApp } from './share';
+import { haversineMeters, formatDistance } from './distance';
+import { getFavorites, toggleFavorite } from './favorites';
 
 interface Store {
   id: number;
@@ -19,7 +22,8 @@ interface Store {
 
 const HEADER_HEIGHT = 96;
 const FOOTER_HEIGHT = 52;
-type View = 'map' | 'feedback';
+type View = 'map' | 'feedback' | 'nearby' | 'favorites';
+const NEARBY_LIMIT = 100;
 
 const ADMIN_CODE = import.meta.env.VITE_ADMIN_CODE ?? '';
 const FORMSPREE_DASHBOARD = 'https://formspree.io/forms';
@@ -199,6 +203,283 @@ function escapeHtml(s: string) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+// 바텀시트 메뉴 항목
+function MenuItem({
+  icon,
+  label,
+  description,
+  onClick,
+}: {
+  icon: string;
+  label: string;
+  description?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 14,
+        width: '100%',
+        padding: '14px 16px',
+        border: 'none',
+        background: '#fff',
+        textAlign: 'left',
+        borderRadius: 12,
+        cursor: 'pointer',
+        WebkitTapHighlightColor: 'transparent',
+      }}
+    >
+      <span
+        style={{
+          fontSize: 24,
+          width: 36,
+          height: 36,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#f2f4f6',
+          borderRadius: 10,
+          flexShrink: 0,
+        }}
+      >
+        {icon}
+      </span>
+      <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <span style={{ fontSize: 15, fontWeight: 700, color: '#191f28' }}>
+          {label}
+        </span>
+        {description && (
+          <span
+            style={{
+              fontSize: 12,
+              color: '#8b95a1',
+              marginTop: 2,
+            }}
+          >
+            {description}
+          </span>
+        )}
+      </span>
+    </button>
+  );
+}
+
+// 거리순 판매점 리스트 화면. 즐겨찾기 화면도 같은 컴포넌트로.
+function NearbyView({
+  stores,
+  userPosition,
+  onClose,
+  onSelect,
+  title = '내 주변 판매점',
+  emptyMessage = '표시할 판매점이 없어요.',
+  showLimit = true,
+}: {
+  stores: Store[];
+  userPosition: LatLng | null;
+  onClose: () => void;
+  onSelect: (store: Store) => void;
+  title?: string;
+  emptyMessage?: string;
+  showLimit?: boolean;
+}) {
+  const sorted = useMemo(() => {
+    if (!userPosition) {
+      // 위치 없으면 거리 계산 불가 → 원본 순서, 거리 Infinity
+      return stores
+        .slice(0, NEARBY_LIMIT)
+        .map((s) => ({ store: s, distance: Infinity }));
+    }
+    const [lat, lng] = userPosition;
+    return stores
+      .map((s) => ({
+        store: s,
+        distance: haversineMeters(lat, lng, s.lat, s.lng),
+      }))
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, NEARBY_LIMIT);
+  }, [stores, userPosition]);
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: '#f7f8fa',
+        display: 'flex',
+        flexDirection: 'column',
+        zIndex: 100,
+      }}
+    >
+      {/* 헤더 */}
+      <div
+        style={{
+          height: 52,
+          padding: '0 12px 0 4px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: '#fff',
+          borderBottom: '1px solid #f0f0f3',
+          flexShrink: 0,
+        }}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="닫기"
+          style={{
+            width: 44,
+            height: 44,
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 0,
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M15 5l-7 7 7 7"
+              stroke="#191f28"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+        <div style={{ fontSize: 16, fontWeight: 700, color: '#191f28' }}>
+          {title}
+        </div>
+        <div style={{ width: 44 }} />
+      </div>
+
+      {/* 리스트 영역 */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        {sorted.length === 0 && (
+          <div
+            style={{
+              padding: '60px 24px',
+              textAlign: 'center',
+              color: '#8b95a1',
+              fontSize: 14,
+              lineHeight: 1.6,
+              whiteSpace: 'pre-line',
+            }}
+          >
+            {emptyMessage}
+          </div>
+        )}
+        {sorted.length > 0 && (
+          <>
+            {showLimit && (
+              <div
+                style={{
+                  padding: '12px 20px 8px',
+                  fontSize: 12,
+                  color: '#8b95a1',
+                }}
+              >
+                {userPosition
+                  ? `가까운 순으로 최대 ${NEARBY_LIMIT}개 표시`
+                  : `총 ${sorted.length}개`}
+              </div>
+            )}
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+              {sorted.map(({ store, distance }, idx) => (
+                <li
+                  key={store.id}
+                  style={{
+                    borderBottom: idx === sorted.length - 1
+                      ? 'none'
+                      : '1px solid #f0f0f3',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => onSelect(store)}
+                    style={{
+                      width: '100%',
+                      padding: '14px 20px',
+                      border: 'none',
+                      background: '#fff',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 12,
+                      WebkitTapHighlightColor: 'transparent',
+                    }}
+                  >
+                    <span
+                      style={{
+                        flexShrink: 0,
+                        minWidth: 56,
+                        height: 28,
+                        padding: '0 10px',
+                        borderRadius: 14,
+                        background:
+                          isFinite(distance) && idx < 3 ? '#3182f6' : '#f2f4f6',
+                        color:
+                          isFinite(distance) && idx < 3 ? '#fff' : '#4e5968',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {isFinite(distance) ? formatDistance(distance) : '—'}
+                    </span>
+                    <span
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        minWidth: 0,
+                        flex: 1,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 15,
+                          fontWeight: 700,
+                          color: '#191f28',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {store.name}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          color: '#8b95a1',
+                          marginTop: 4,
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {store.address}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <div style={{ height: 20 }} />
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // 제보 화면. 제목(선택) + 본문(필수) + [취소][완료] 버튼.
@@ -453,6 +734,9 @@ function createStoreInfoElement(
   callbacks: {
     onCopied: () => void;
     onNavigate: (app: MapAppKey) => void;
+    onToggleFavorite: () => void;
+    isFavoriteNow: boolean;
+    distanceMeters?: number; // 사용자 위치로부터의 거리(m). 있으면 상호명 옆에 표시.
   }
 ): HTMLDivElement {
   const root = document.createElement('div');
@@ -504,9 +788,40 @@ function createStoreInfoElement(
     `
   ).join('');
 
+  const starColor = callbacks.isFavoriteNow ? '#ffc107' : '#c6cdd6';
+  const starFill = callbacks.isFavoriteNow ? '#ffc107' : 'none';
+  const distanceLabel =
+    typeof callbacks.distanceMeters === 'number' &&
+    isFinite(callbacks.distanceMeters)
+      ? `<span style="font-size:12px;font-weight:500;color:#8b95a1;margin-left:4px;">(${formatDistance(callbacks.distanceMeters)})</span>`
+      : '';
   root.innerHTML = `
-    <div style="font-size:14px;font-weight:700;color:#191f28;margin-bottom:8px;">
-      ${escapeHtml(store.name)}
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
+      <div style="font-size:14px;font-weight:700;color:#191f28;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+        ${escapeHtml(store.name)}${distanceLabel}
+      </div>
+      <button type="button"
+              class="store-fav-btn"
+              aria-label="${callbacks.isFavoriteNow ? '즐겨찾기 해제' : '즐겨찾기 추가'}"
+              style="
+                flex-shrink:0;
+                width:30px;height:30px;
+                border:none;
+                border-radius:8px;
+                background:transparent;
+                cursor:pointer;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                padding:0;
+                -webkit-tap-highlight-color:transparent;
+              ">
+        <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 1.5l2.6 5.27 5.82.85-4.21 4.1.99 5.78L10 14.77l-5.2 2.73.99-5.78L1.58 7.62l5.82-.85L10 1.5z"
+                fill="${starFill}" stroke="${starColor}" stroke-width="1.4"
+                stroke-linejoin="round"/>
+        </svg>
+      </button>
     </div>
     <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:12px;">
       <div class="store-address"
@@ -566,6 +881,22 @@ function createStoreInfoElement(
   };
   root.querySelector('.store-address')?.addEventListener('click', handleCopy);
   root.querySelector('.store-copy-btn')?.addEventListener('click', handleCopy);
+  let currentFav = callbacks.isFavoriteNow;
+  const favBtn = root.querySelector<HTMLButtonElement>('.store-fav-btn');
+  favBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    callbacks.onToggleFavorite();
+    currentFav = !currentFav;
+    const path = favBtn.querySelector('path');
+    if (path) {
+      path.setAttribute('fill', currentFav ? '#ffc107' : 'none');
+      path.setAttribute('stroke', currentFav ? '#ffc107' : '#c6cdd6');
+    }
+    favBtn.setAttribute(
+      'aria-label',
+      currentFav ? '즐겨찾기 해제' : '즐겨찾기 추가'
+    );
+  });
 
   root.querySelectorAll<HTMLButtonElement>('.store-nav-btn').forEach((btn) => {
     btn.addEventListener('click', (e) => {
@@ -598,7 +929,72 @@ export default function App() {
   const [regionFilter, setRegionFilter] = useState<string>('전체');
 
   const [view, setView] = useState<View>('map');
+  const [menuOpen, setMenuOpen] = useState(false);
   const isAdmin = useMemo(() => checkIsAdmin(), []);
+
+  // 스플래시: SDK + stores가 준비될 때까지 풀스크린 로딩 표시
+  const [splashEnded, setSplashEnded] = useState(false);
+  const [splashVisible, setSplashVisible] = useState(true);
+  const mountedAtRef = useRef(Date.now());
+
+  const [favorites, setFavorites] = useState<Set<number>>(() => getFavorites());
+  // 마커 click 핸들러에서 항상 최신 favorites를 참조할 수 있도록 ref
+  const favoritesRef = useRef(favorites);
+  useEffect(() => {
+    favoritesRef.current = favorites;
+  }, [favorites]);
+
+  const handleToggleFavorite = useCallback(
+    (storeId: number, storeName: string) => {
+      const next = toggleFavorite(storeId);
+      setFavorites(new Set(next));
+      showToastRef.current(
+        next.has(storeId)
+          ? `'${storeName}'을(를) 즐겨찾기에 추가했어요`
+          : `'${storeName}'을(를) 즐겨찾기에서 뺐어요`
+      );
+    },
+    []
+  );
+
+  // 스플래시 종료 조건: SDK + stores 둘 다 준비 + 최소 노출 시간 800ms
+  useEffect(() => {
+    if (splashEnded) return;
+    if (!sdkReady || stores.length === 0) return;
+    const MIN_SPLASH_MS = 800;
+    const elapsed = Date.now() - mountedAtRef.current;
+    const remaining = Math.max(0, MIN_SPLASH_MS - elapsed);
+    const t = setTimeout(() => setSplashEnded(true), remaining);
+    return () => clearTimeout(t);
+  }, [sdkReady, stores.length, splashEnded]);
+
+  // 안전장치: 5초 후엔 무조건 스플래시 종료 (네트워크 실패 등 대비)
+  useEffect(() => {
+    const t = setTimeout(() => setSplashEnded(true), 5000);
+    return () => clearTimeout(t);
+  }, []);
+
+  // splashEnded 후 fade-out 시간(350ms) 지나면 DOM에서 제거
+  useEffect(() => {
+    if (!splashEnded) return;
+    const t = setTimeout(() => setSplashVisible(false), 350);
+    return () => clearTimeout(t);
+  }, [splashEnded]);
+
+  // 마커 click 등 effect closure에서 항상 최신 userPosition 참조하기 위한 ref
+  const userPositionRef = useRef(userPosition);
+  useEffect(() => {
+    userPositionRef.current = userPosition;
+  }, [userPosition]);
+
+  const distanceFromUser = useCallback(
+    (lat: number, lng: number): number | undefined => {
+      const u = userPositionRef.current;
+      if (!u) return undefined;
+      return haversineMeters(u[0], u[1], lat, lng);
+    },
+    []
+  );
 
   const [toastMessage, setToastMessage] = useState('');
   const toastTimerRef = useRef<number | null>(null);
@@ -784,10 +1180,11 @@ export default function App() {
             else if (app === 'naver') void navigateNaver(dest);
             else if (app === 'kakao') void navigateKakao(dest);
           },
+          onToggleFavorite: () => handleToggleFavorite(store.id, store.name),
+          isFavoriteNow: favoritesRef.current.has(store.id),
+          distanceMeters: distanceFromUser(store.lat, store.lng),
         });
-        (
-          infoWindow as unknown as { setContent: (c: HTMLElement | string) => void }
-        ).setContent(content);
+        infoWindow.setContent(content);
         infoWindow.open(mapInstance, marker);
       });
       return marker;
@@ -888,6 +1285,14 @@ export default function App() {
           from { opacity: 0; transform: translate(-50%, 8px); }
           to   { opacity: 1; transform: translate(-50%, 0); }
         }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes sheetUp {
+          from { transform: translateY(100%); }
+          to   { transform: translateY(0); }
+        }
         .store-copy-btn:active { background: #e5e8ec !important; }
         .store-address:active  { color: #3182f6 !important; }
         .store-nav-btn:active  { background: #f2f4f6 !important; transform: scale(0.95); }
@@ -926,7 +1331,64 @@ export default function App() {
         />
       )}
 
-      {view === 'map' && (<>
+      {(view === 'nearby' || view === 'favorites') && (
+        <NearbyView
+          stores={
+            view === 'favorites'
+              ? stores.filter((s) => favorites.has(s.id))
+              : visibleStores
+          }
+          userPosition={userPosition}
+          title={view === 'favorites' ? '⭐ 즐겨찾기' : '내 주변 판매점'}
+          emptyMessage={
+            view === 'favorites'
+              ? '아직 즐겨찾기한 판매점이 없어요.\n핀을 누르고 별을 눌러보세요.'
+              : '표시할 판매점이 없어요.'
+          }
+          onClose={() => setView('map')}
+          onSelect={(store) => {
+            if (!mapInstance || !infoWindow || !window.naver) return;
+            const naver = window.naver.maps;
+            const latlng = new naver.LatLng(store.lat, store.lng);
+            setView('map');
+            // 다음 paint 직전에 한 번에 줌 + 중심 + InfoWindow.
+            // double rAF로 NearbyView가 unmount되고 layout이 안정된 뒤 실행.
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                // 줌을 먼저 적용해서 setCenter가 정확한 viewport 기준으로 동작하게.
+                mapInstance.setZoom(16);
+                mapInstance.setCenter(latlng);
+                const content = createStoreInfoElement(store, {
+                onCopied: () => showToastRef.current('주소가 복사되었어요'),
+                onNavigate: (app) => {
+                  const dest = {
+                    lat: store.lat,
+                    lng: store.lng,
+                    name: store.name,
+                    address: store.address,
+                  };
+                  if (app === 'tmap') void navigateTmap(dest);
+                  else if (app === 'naver') void navigateNaver(dest);
+                  else if (app === 'kakao') void navigateKakao(dest);
+                },
+                onToggleFavorite: () =>
+                  handleToggleFavorite(store.id, store.name),
+                isFavoriteNow: favoritesRef.current.has(store.id),
+                distanceMeters: distanceFromUser(store.lat, store.lng),
+              });
+                infoWindow.setContent(content);
+                infoWindow.setPosition(latlng);
+                infoWindow.open(mapInstance);
+              });
+            });
+          }}
+        />
+      )}
+
+      {/* 지도 영역(헤더/지도/푸터)은 항상 렌더링.
+          - 다른 view(피드백/리스트)는 position:fixed로 덮어씌워짐
+          - view 전환 시 지도 div가 unmount되지 않아 네이버 인스턴스가 살아있음 */}
+      <>
 
       {/* 헤더 */}
       <div
@@ -959,7 +1421,7 @@ export default function App() {
           >
             🏪 스포츠토토 판매점
           </div>
-          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
             {isAdmin && (
               <a
                 href={FORMSPREE_DASHBOARD}
@@ -986,31 +1448,35 @@ export default function App() {
             )}
             <button
               type="button"
-              onClick={() => setView('feedback')}
+              aria-label="메뉴 열기"
+              onClick={() => setMenuOpen(true)}
               style={{
+                width: 40,
+                height: 40,
                 border: 'none',
-                background: '#eef2ff',
-                color: '#3b5bdb',
-                padding: '6px 12px',
-                borderRadius: 8,
-                fontSize: 12,
-                fontWeight: 700,
+                background: 'transparent',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+                borderRadius: 8,
                 WebkitTapHighlightColor: 'transparent',
               }}
             >
-              제보하기
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                <path d="M3 6h16M3 11h16M3 16h16"
+                  stroke="#191f28" strokeWidth="2" strokeLinecap="round" />
+              </svg>
             </button>
           </div>
         </div>
 
-        {/* 두 번째 줄: 업데이트 정보 + 지역 셀렉트 */}
+        {/* 두 번째 줄: 업데이트 정보 + 바로 우측에 지역 셀렉트 */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
             gap: 8,
             minHeight: 28,
           }}
@@ -1022,8 +1488,8 @@ export default function App() {
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              flex: 1,
               minWidth: 0,
+              flex: '0 1 auto',
             }}
           >
             전국 {stores.length.toLocaleString()}개
@@ -1038,6 +1504,7 @@ export default function App() {
             className="region-select"
             value={regionFilter}
             onChange={(e) => setRegionFilter(e.target.value)}
+            style={{ flexShrink: 0 }}
           >
             {regions.map((r) => (
               <option key={r} value={r}>
@@ -1201,7 +1668,100 @@ export default function App() {
         </span>
       </div>
 
-      </>)}
+      </>
+
+      {/* 메뉴 바텀시트 */}
+      {menuOpen && (
+        <div
+          onClick={() => setMenuOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 8000,
+            background: 'rgba(0,0,0,0.45)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-end',
+            animation: 'fadeIn 0.18s ease-out',
+          }}
+        >
+          <div
+            role="menu"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#fff',
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              paddingBottom: 'env(safe-area-inset-bottom, 12px)',
+              animation: 'sheetUp 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)',
+            }}
+          >
+            {/* 핸들 */}
+            <div
+              style={{
+                width: 36,
+                height: 4,
+                borderRadius: 2,
+                background: '#e5e8ec',
+                margin: '10px auto 6px',
+              }}
+            />
+            <div style={{ padding: '8px 8px 20px' }}>
+              <MenuItem
+                icon="📍"
+                label="내 주변 판매점"
+                description="가까운 순서로 한눈에 보기"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setView('nearby');
+                }}
+              />
+              <MenuItem
+                icon="⭐"
+                label={
+                  favorites.size > 0
+                    ? `즐겨찾기 (${favorites.size})`
+                    : '즐겨찾기'
+                }
+                description="자주 가는 판매점만 모아보기"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setView('favorites');
+                }}
+              />
+              <MenuItem
+                icon="📤"
+                label="이 미니앱 공유하기"
+                description="친구에게 토스 미니앱 링크를 보내요"
+                onClick={async () => {
+                  setMenuOpen(false);
+                  try {
+                    const r = await shareMiniApp();
+                    if (r === 'copied') {
+                      showToast('공유 링크가 복사됐어요');
+                    }
+                  } catch (err) {
+                    const name = (err as { name?: string })?.name;
+                    if (name !== 'AbortError') {
+                      console.error(err);
+                      showToast('공유에 실패했어요');
+                    }
+                  }
+                }}
+              />
+              <MenuItem
+                icon="📢"
+                label="제보하기"
+                description="잘못된 정보·폐업 판매점·개선 의견"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setView('feedback');
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 토스트 */}
       {toastMessage && (
@@ -1239,6 +1799,67 @@ export default function App() {
             />
           </svg>
           {toastMessage}
+        </div>
+      )}
+
+      {/* 스플래시 화면 (가장 위에 표시) */}
+      {splashVisible && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            background: '#fff',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: splashEnded ? 0 : 1,
+            transition: 'opacity 0.3s ease',
+            pointerEvents: splashEnded ? 'none' : 'auto',
+            padding: '0 24px',
+            textAlign: 'center',
+          }}
+        >
+          <div
+            style={{
+              fontSize: 72,
+              marginBottom: 18,
+              lineHeight: 1,
+            }}
+          >
+            🏪
+          </div>
+          <div
+            style={{
+              fontSize: 22,
+              fontWeight: 700,
+              color: '#191f28',
+              marginBottom: 8,
+              letterSpacing: '-0.5px',
+            }}
+          >
+            스포츠토토 판매점
+          </div>
+          <div
+            style={{
+              fontSize: 14,
+              color: '#8b95a1',
+              marginBottom: 44,
+            }}
+          >
+            전국 6,000여 판매점을 한눈에
+          </div>
+          <div
+            style={{
+              width: 28,
+              height: 28,
+              border: '3px solid #e5e8ec',
+              borderTop: '3px solid #3182f6',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+            }}
+          />
         </div>
       )}
 

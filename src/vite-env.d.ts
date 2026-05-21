@@ -38,9 +38,10 @@ interface NaverMarker {
   getPosition: () => NaverLatLng;
 }
 interface NaverInfoWindow {
-  open: (map: NaverMap, marker: NaverMarker) => void;
+  open: (map: NaverMap, anchor?: NaverMarker | NaverLatLng) => void;
   close: () => void;
-  setContent: (html: string) => void;
+  setContent: (html: string | HTMLElement) => void;
+  setPosition: (latlng: NaverLatLng) => void;
 }
 
 interface Window {
