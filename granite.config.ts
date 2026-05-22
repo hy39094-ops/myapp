@@ -3,9 +3,9 @@ import { defineConfig } from "@apps-in-toss/web-framework/config";
 export default defineConfig({
   appName: "sports-toto", // 콘솔에 입력한 appName을 입력하세요.
   brand: {
-    displayName: "전국 스포츠토토 판매점 찾기", // 콘솔에 입력한 앱 이름을 입력하세요.
-    primaryColor: "#FF91D5", // 화면에 노출될 앱의 기본 색상으로 바꿔주세요.
-    icon: "", // 콘솔에서 업로드한 이미지의 URL을 입력하세요.(콘솔의 앱 정보에서 업로드한 이미지를 우클릭해 링크 복사 후 넣어주세요)
+    displayName: "전국 스포츠토토 판매점", // 콘솔에 입력한 앱 이름과 동일해야 검수 통과
+    primaryColor: "#FF91D5",
+    icon: "https://static.toss.im/appsintoss/44501/2c901fc3-2bb6-482e-98dd-c70d480328f2.png",
   },
   web: {
     host: "localhost",
