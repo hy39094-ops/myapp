@@ -1298,7 +1298,8 @@ function StadiumView({
           color: 'var(--text-3)',
         }}
       >
-        경기장 반경 {STADIUM_RADIUS_KM}km 이내 판매점을 볼 수 있어요.{' '}
+        경기장 반경 {STADIUM_RADIUS_KM}km 이내 판매점을 볼 수 있어요.
+        <br />
         {userPosition
           ? '내 위치에서 가까운 경기장부터 정렬했어요.'
           : '위치 권한이 없어 기본 순서로 표시해요.'}
@@ -1332,7 +1333,13 @@ function StadiumView({
                 }}
               >
                 <span style={{ fontSize: 22 }} aria-hidden>
-                  🏟️
+                  {stadium.sport === 'baseball'
+                    ? '⚾'
+                    : stadium.sport === 'football'
+                      ? '⚽'
+                      : stadium.sport === 'volleyball'
+                        ? '🏐'
+                        : '🏀'}
                 </span>
                 <span
                   style={{

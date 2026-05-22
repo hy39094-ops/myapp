@@ -41,13 +41,13 @@ export const LEAGUE_LABEL: Record<League, string> = {
 
 // 경기장 chooser 칩에 표기되는 이름 (사용자 친화적인 표현)
 export const LEAGUE_CHIP_LABEL: Record<League, string> = {
-  KBO: '프로야구',
-  K1: 'K리그1',
-  K2: 'K리그2',
-  'V-M': '남자배구',
-  'V-F': '여자배구',
-  KBL: '남자농구',
-  WKBL: '여자농구',
+  KBO: '⚾ 프로야구',
+  K1: '⚽ K리그1',
+  K2: '⚽ K리그2',
+  'V-M': '🏐 남자배구',
+  'V-F': '🏐 여자배구',
+  KBL: '🏀 남자농구',
+  WKBL: '🏀 여자농구',
 };
 
 // chip 노출 순서 (인기 순)
