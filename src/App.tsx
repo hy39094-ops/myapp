@@ -293,7 +293,7 @@ function MenuItem({
 }: {
   icon: string;
   label: string;
-  description?: string;
+  description?: React.ReactNode;
   onClick: () => void;
 }) {
   return (
@@ -346,6 +346,125 @@ function MenuItem({
         )}
       </span>
     </button>
+  );
+}
+
+// 지역 선택용 커스텀 드롭다운.
+// 네이티브 <select>는 모바일에서 드롭다운 위치 제어가 불가능해서 상단 헤더를 가리는 이슈가 있음.
+// 버튼 + 절대 위치 리스트 조합으로 헤더 아래에 펼쳐지도록 함.
+function RegionDropdown({
+  value,
+  options,
+  onChange,
+  ariaLabel,
+}: {
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+  ariaLabel?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (containerRef.current && !containerRef.current.contains(target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('touchstart', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
+  }, [open]);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{ position: 'relative', flexShrink: 0 }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        style={{
+          appearance: 'none',
+          background:
+            'var(--surface-2) url("data:image/svg+xml,%3Csvg width=\'12\' height=\'8\' viewBox=\'0 0 12 8\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M1 1.5L6 6L11 1.5\' stroke=\'%238b95a1\' stroke-width=\'1.6\' fill=\'none\' stroke-linecap=\'round\'/%3E%3C/svg%3E") no-repeat right 10px center',
+          border: 'none',
+          borderRadius: 8,
+          padding: '8px 28px 8px 12px',
+          fontSize: 13,
+          fontWeight: 600,
+          color: 'var(--text-1)',
+          outline: 'none',
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+          WebkitTapHighlightColor: 'transparent',
+        }}
+      >
+        {value}
+      </button>
+      {open && (
+        <ul
+          role="listbox"
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            marginTop: 4,
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 10,
+            boxShadow: '0 6px 20px rgba(0,0,0,0.12)',
+            maxHeight: 280,
+            overflowY: 'auto',
+            zIndex: 30,
+            minWidth: 'max(100%, 120px)',
+            listStyle: 'none',
+            padding: 4,
+            margin: 0,
+          }}
+        >
+          {options.map((opt) => (
+            <li key={opt}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={opt === value}
+                onClick={() => {
+                  onChange(opt);
+                  setOpen(false);
+                }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '10px 14px',
+                  border: 'none',
+                  background: opt === value ? 'var(--surface-2)' : 'transparent',
+                  borderRadius: 6,
+                  textAlign: 'left',
+                  fontSize: 13,
+                  fontWeight: opt === value ? 700 : 500,
+                  color: 'var(--text-1)',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  WebkitTapHighlightColor: 'transparent',
+                }}
+              >
+                {opt}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -2137,7 +2256,7 @@ function createStoreInfoElement(
               cursor:pointer;
               -webkit-tap-highlight-color:transparent;
             ">
-      📢 이 판매점 제보하기
+      📢 이 판매점 오류 제보하기
     </button>
   `;
 
@@ -2855,21 +2974,6 @@ export default function App() {
           width: 1px;
           background: #e5e8ec;
         }
-        .region-select {
-          appearance: none;
-          -webkit-appearance: none;
-          background-color: var(--surface-2);
-          border: none;
-          border-radius: 8px;
-          padding: 8px 28px 8px 12px;
-          font-size: 13px;
-          font-weight: 600;
-          color: var(--text-1);
-          background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6L11 1.5' stroke='%238b95a1' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-          background-repeat: no-repeat;
-          background-position: right 10px center;
-          outline: none;
-        }
         button > svg { color: var(--text-1); }
         /* NAVER 지도 SDK가 강제로 렌더링하는 attribution/legal 링크 숨김 */
         a[href*="pstatic.net/static/maps/mantle/notice/legal.html"],
@@ -3004,7 +3108,7 @@ export default function App() {
         >
           <div
             style={{
-              fontSize: 17,
+              fontSize: 20,
               fontWeight: 700,
               color: 'var(--text-1)',
               letterSpacing: '-0.3px',
@@ -3130,35 +3234,22 @@ export default function App() {
               </>
             )}
           </div>
-          <select
-            className="region-select"
+          <RegionDropdown
             value={regionFilter}
-            onChange={(e) => {
-              setRegionFilter(e.target.value);
+            options={regions}
+            onChange={(v) => {
+              setRegionFilter(v);
               setSubRegionFilter('전체');
             }}
-            style={{ flexShrink: 0 }}
-          >
-            {regions.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
+            ariaLabel="시/도 선택"
+          />
           {showSubRegion && (
-            <select
-              className="region-select"
+            <RegionDropdown
               value={subRegionFilter}
-              onChange={(e) => setSubRegionFilter(e.target.value)}
-              style={{ flexShrink: 0 }}
-              aria-label="시/구 선택"
-            >
-              {subRegionOptions.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+              options={subRegionOptions}
+              onChange={setSubRegionFilter}
+              ariaLabel="시/구 선택"
+            />
           )}
         </div>
       </div>
@@ -3439,7 +3530,7 @@ export default function App() {
               <MenuItem
                 icon="🏟️"
                 label="경기장 주변 판매점 보기"
-                description="프로 스포츠 홈구장 반경 2km 이내"
+                description={<>프로 스포츠 홈구장<br />반경 2km 이내</>}
                 onClick={() => {
                   setMenuOpen(false);
                   setView('stadiums');
