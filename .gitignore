@@ -6,7 +6,16 @@ node_modules/
 # Build outputs
 dist/
 build/
+www/
 *.ait
+
+# Capacitor / Android 빌드 산출물 (소스만 commit, 빌드 결과물 제외)
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/app/release/
+android/.idea/
 
 # Logs
 *.log

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">전국 스포츠토토 위치 찾기</string>
+    <string name="title_activity_main">전국 스포츠토토 위치 찾기</string>
+    <string name="package_name">com.hy39094.sportstoto</string>
+    <string name="custom_url_scheme">com.hy39094.sportstoto</string>
+</resources>

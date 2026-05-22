@@ -1,7 +1,7 @@
 import { defineConfig } from "@apps-in-toss/web-framework/config";
 
 export default defineConfig({
-  appName: "my-mini-app", // 콘솔에 입력한 appName을 입력하세요.
+  appName: "sports-toto", // 콘솔에 입력한 appName을 입력하세요.
   brand: {
     displayName: "전국 스포츠토토 판매점 찾기", // 콘솔에 입력한 앱 이름을 입력하세요.
     primaryColor: "#FF91D5", // 화면에 노출될 앱의 기본 색상으로 바꿔주세요.

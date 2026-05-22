@@ -1,0 +1,36 @@
+<svg width="600" height="600" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3182f6"/>
+      <stop offset="100%" stop-color="#1d63d6"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <!-- 풀 배경 -->
+  <rect width="600" height="600" fill="url(#bg)"/>
+
+  <!-- 위치 핀 (흰색) -->
+  <g filter="url(#shadow)" transform="translate(200, 80)">
+    <!-- pin shape (200x250) -->
+    <path d="
+      M100 0
+      C44.8 0 0 44.8 0 100
+      C0 166.7 100 250 100 250
+      C100 250 200 166.7 200 100
+      C200 44.8 155.2 0 100 0 Z"
+      fill="#ffffff"/>
+    <circle cx="100" cy="100" r="46" fill="#3182f6"/>
+    <circle cx="100" cy="100" r="17" fill="#ffffff"/>
+  </g>
+
+  <!-- 하단 텍스트: 두 줄 -->
+  <text text-anchor="middle"
+        font-family="-apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif"
+        fill="#ffffff" letter-spacing="-1.5">
+    <tspan x="300" y="445" font-size="50" font-weight="700" opacity="0.95">전국 스포츠토토</tspan>
+    <tspan x="300" y="520" font-size="62" font-weight="900">위치 찾기</tspan>
+  </text>
+</svg>

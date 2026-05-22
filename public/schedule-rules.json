@@ -1,0 +1,51 @@
+{
+  "_comment": "스포츠토토/프로토 회차 마감 패턴. 주별 반복 규칙으로 다음 마감 시각/회차 번호를 계산. 실제와 차이가 있을 수 있으니 운영하면서 baseRound/baseDate를 보정.",
+  "_weekdayMap": "0=일,1=월,2=화,3=수,4=목,5=금,6=토",
+  "_timezone": "Asia/Seoul",
+  "_roundCalc": "baseRound = baseDate의 회차번호. 이후 매주(매일) 1씩 증가.",
+  "rules": [
+    {
+      "id": "soccer-toto-sat",
+      "label": "축구토토",
+      "weekday": 6,
+      "closeTime": "14:00",
+      "note": "매주 토요일",
+      "baseRound": 23,
+      "baseDate": "2026-05-23"
+    },
+    {
+      "id": "baseball-toto-tue",
+      "label": "야구토토",
+      "weekday": 2,
+      "closeTime": "18:00",
+      "note": "매주 화요일",
+      "baseRound": 19,
+      "baseDate": "2026-05-19"
+    },
+    {
+      "id": "basketball-toto-tue",
+      "label": "농구토토",
+      "weekday": 2,
+      "closeTime": "18:00",
+      "note": "매주 화요일",
+      "baseRound": 33,
+      "baseDate": "2026-05-19"
+    },
+    {
+      "id": "volleyball-toto-wed",
+      "label": "배구토토",
+      "weekday": 3,
+      "closeTime": "18:00",
+      "note": "매주 수요일",
+      "baseRound": 30,
+      "baseDate": "2026-05-20"
+    },
+    {
+      "id": "proto-daily",
+      "label": "프로토 승부식",
+      "weekday": -1,
+      "closeTime": "23:00",
+      "note": "매일 (경기 시작 시 마감)"
+    }
+  ]
+}

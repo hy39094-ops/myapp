@@ -1,0 +1,91 @@
+<svg width="1932" height="828" viewBox="0 0 1932 828" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="thumbBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1d63d6"/>
+      <stop offset="100%" stop-color="#0a3b8a"/>
+    </linearGradient>
+    <radialGradient id="mapBg" cx="0.5" cy="0.5" r="0.7">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="pinShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- 풀 배경 -->
+  <rect width="1932" height="828" fill="url(#thumbBg)"/>
+
+  <!-- 좌측: 텍스트 영역 (960px) -->
+  <g transform="translate(120, 240)">
+    <text
+      font-family="-apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif"
+      font-weight="900"
+      fill="#ffffff"
+    >
+      <tspan x="0" y="0" font-size="100" letter-spacing="-3">전국 스포츠토토</tspan>
+      <tspan x="0" y="120" font-size="100" letter-spacing="-3">판매점 6,000여 곳</tspan>
+    </text>
+    <text
+      x="0" y="230"
+      font-family="-apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif"
+      font-size="44" font-weight="500" fill="#ffffff" opacity="0.85"
+    >
+      내 주변 판매점, 지도에서 한눈에
+    </text>
+  </g>
+
+  <!-- 우측: 지도 모형 영역 (시작 x=1080) -->
+  <g transform="translate(1080, 80)">
+    <!-- 둥근 사각형 지도 영역 -->
+    <rect x="0" y="0" width="772" height="668" rx="48" fill="#ffffff" opacity="0.08"/>
+    <rect x="0" y="0" width="772" height="668" rx="48" fill="url(#mapBg)"/>
+
+    <!-- 지도 라인 (도로) -->
+    <g stroke="#ffffff" stroke-opacity="0.18" stroke-width="3" fill="none">
+      <path d="M0 200 Q200 180 400 220 T772 200" />
+      <path d="M0 380 Q280 360 500 400 T772 420" />
+      <path d="M0 540 Q200 560 400 540 T772 580" />
+      <path d="M180 0 Q200 200 220 400 T260 668" />
+      <path d="M480 0 Q500 220 520 420 T560 668" />
+    </g>
+
+    <!-- 마커 핀 4개 (분포) -->
+    <g filter="url(#pinShadow)">
+      <!-- 큰 중앙 핀 -->
+      <g transform="translate(360, 250)">
+        <path d="M50 0 C22.4 0 0 22.4 0 50 C0 83 50 125 50 125 C50 125 100 83 100 50 C100 22.4 77.6 0 50 0 Z" fill="#ef4444"/>
+        <circle cx="50" cy="50" r="20" fill="#ffffff"/>
+      </g>
+      <!-- 보조 핀 1 -->
+      <g transform="translate(160, 140)">
+        <path d="M28 0 C12.5 0 0 12.5 0 28 C0 46.5 28 70 28 70 C28 70 56 46.5 56 28 C56 12.5 43.5 0 28 0 Z" fill="#ef4444"/>
+        <circle cx="28" cy="28" r="11" fill="#ffffff"/>
+      </g>
+      <!-- 보조 핀 2 -->
+      <g transform="translate(580, 180)">
+        <path d="M28 0 C12.5 0 0 12.5 0 28 C0 46.5 28 70 28 70 C28 70 56 46.5 56 28 C56 12.5 43.5 0 28 0 Z" fill="#ef4444"/>
+        <circle cx="28" cy="28" r="11" fill="#ffffff"/>
+      </g>
+      <!-- 보조 핀 3 -->
+      <g transform="translate(230, 460)">
+        <path d="M28 0 C12.5 0 0 12.5 0 28 C0 46.5 28 70 28 70 C28 70 56 46.5 56 28 C56 12.5 43.5 0 28 0 Z" fill="#ef4444"/>
+        <circle cx="28" cy="28" r="11" fill="#ffffff"/>
+      </g>
+      <!-- 보조 핀 4 -->
+      <g transform="translate(560, 470)">
+        <path d="M28 0 C12.5 0 0 12.5 0 28 C0 46.5 28 70 28 70 C28 70 56 46.5 56 28 C56 12.5 43.5 0 28 0 Z" fill="#ef4444"/>
+        <circle cx="28" cy="28" r="11" fill="#ffffff"/>
+      </g>
+    </g>
+
+    <!-- 클러스터 버블 -->
+    <g transform="translate(420, 380)">
+      <circle cx="40" cy="40" r="50" fill="#3182f6" fill-opacity="0.25"/>
+      <circle cx="40" cy="40" r="36" fill="#3182f6"/>
+      <text x="40" y="50" text-anchor="middle"
+            font-family="-apple-system, BlinkMacSystemFont, sans-serif"
+            font-size="22" font-weight="900" fill="#ffffff">128</text>
+    </g>
+  </g>
+</svg>
