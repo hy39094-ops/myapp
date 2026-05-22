@@ -1,6 +1,5 @@
 // 제보 폼 → Formspree 백엔드로 전송.
 // .env의 VITE_FORMSPREE_ENDPOINT가 설정돼 있어야 동작.
-// 사진 첨부가 있으면 multipart/form-data, 없으면 JSON.
 
 const ENDPOINT = import.meta.env.VITE_FORMSPREE_ENDPOINT ?? '';
 
@@ -38,7 +37,6 @@ export interface FeedbackInput {
   body: string;
   storeContext?: StoreContext;
   userLocation?: UserLocationInput;
-  photo?: File | null;
 }
 
 export class FeedbackConfigError extends Error {
@@ -73,45 +71,6 @@ export async function sendFeedback(input: FeedbackInput): Promise<void> {
     ? `[스포츠토토 제보·${categoryLabel}] ${trimmedTitle}`
     : `[스포츠토토 제보·${categoryLabel}]`;
 
-  // 사진이 있으면 multipart
-  if (input.photo) {
-    const fd = new FormData();
-    fd.append('category', categoryLabel);
-    fd.append('title', trimmedTitle || '(제목 없음)');
-    fd.append('message', input.body.trim());
-    fd.append('submittedAt', submittedAt);
-    fd.append(
-      'userAgent',
-      typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
-    );
-    if (input.storeContext) {
-      fd.append('storeId', String(input.storeContext.id));
-      fd.append('storeName', input.storeContext.name);
-      fd.append('storeAddress', input.storeContext.address);
-      fd.append(
-        'storeCoords',
-        `${input.storeContext.lat},${input.storeContext.lng}`
-      );
-    }
-    if (input.userLocation) {
-      fd.append(
-        'userLocation',
-        `${input.userLocation.lat},${input.userLocation.lng}`
-      );
-    }
-    fd.append('photo', input.photo);
-    fd.append('_subject', subject);
-
-    const res = await fetch(ENDPOINT, {
-      method: 'POST',
-      headers: { Accept: 'application/json' },
-      body: fd,
-    });
-    if (!res.ok) throw await buildErrorFromResponse(res);
-    return;
-  }
-
-  // 사진 없으면 JSON
   const payload: Record<string, unknown> = {
     category: categoryLabel,
     title: trimmedTitle || '(제목 없음)',

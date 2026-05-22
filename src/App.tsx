@@ -1538,9 +1538,7 @@ const CATEGORY_ORDER: FeedbackCategory[] = [
   'new',
   'etc',
 ];
-const PHOTO_MAX_BYTES = 5 * 1024 * 1024; // 5MB
-
-// 제보 화면. 카테고리 / 제목(선택) / 본문(필수) / 사진(선택) / [취소][완료] 버튼.
+// 제보 화면. 카테고리 / 제목(선택) / 본문(필수) / [취소][완료] 버튼.
 function FeedbackView({
   onClose,
   onShowToast,
@@ -1558,36 +1556,12 @@ function FeedbackView({
   );
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string>('');
   const [includeLocation, setIncludeLocation] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-
-  // 사진 선택 시 미리보기 URL 생성/해제
-  useEffect(() => {
-    if (!photo) {
-      setPhotoPreview('');
-      return;
-    }
-    const url = URL.createObjectURL(photo);
-    setPhotoPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [photo]);
 
   const trimmedBody = body.trim();
   const canSubmit =
     category !== null && trimmedBody.length > 0 && !submitting;
-
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > PHOTO_MAX_BYTES) {
-      onShowToast('사진은 5MB 이하만 첨부할 수 있어요');
-      e.target.value = '';
-      return;
-    }
-    setPhoto(file);
-  };
 
   const handleSubmit = async () => {
     if (!category) {
@@ -1609,7 +1583,6 @@ function FeedbackView({
           category === 'new' && includeLocation && userLocation
             ? { lat: userLocation[0], lng: userLocation[1] }
             : undefined,
-        photo: photo ?? undefined,
       });
       onShowToast('제보가 접수됐어요. 감사합니다!');
       onClose();
@@ -1918,99 +1891,6 @@ function FeedbackView({
           </div>
         </div>
 
-        {/* 사진 첨부 */}
-        <div>
-          <label
-            style={{
-              display: 'block',
-              fontSize: 13,
-              color: 'var(--text-2)',
-              fontWeight: 600,
-              marginBottom: 6,
-            }}
-          >
-            사진{' '}
-            <span style={{ color: 'var(--text-3)', fontWeight: 500 }}>
-              (선택, 1장, 5MB 이하)
-            </span>
-          </label>
-          {!photo && (
-            <label
-              htmlFor="feedback-photo"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                height: 56,
-                border: '1px dashed #c6cdd6',
-                borderRadius: 10,
-                background: 'var(--surface-2)',
-                color: 'var(--text-2)',
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: 'pointer',
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              📷 사진 첨부
-            </label>
-          )}
-          {photo && (
-            <div
-              style={{
-                position: 'relative',
-                display: 'inline-block',
-                borderRadius: 10,
-                overflow: 'hidden',
-                border: '1px solid var(--border-2)',
-              }}
-            >
-              <img
-                src={photoPreview}
-                alt="첨부된 사진 미리보기"
-                style={{
-                  display: 'block',
-                  maxWidth: 160,
-                  maxHeight: 160,
-                  objectFit: 'cover',
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => setPhoto(null)}
-                aria-label="사진 제거"
-                style={{
-                  position: 'absolute',
-                  top: 4,
-                  right: 4,
-                  width: 24,
-                  height: 24,
-                  border: 'none',
-                  borderRadius: 12,
-                  background: 'rgba(0,0,0,0.6)',
-                  color: '#fff',
-                  fontSize: 12,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: 0,
-                  WebkitTapHighlightColor: 'transparent',
-                }}
-              >
-                ✕
-              </button>
-            </div>
-          )}
-          <input
-            id="feedback-photo"
-            type="file"
-            accept="image/*"
-            onChange={handlePhotoChange}
-            style={{ display: 'none' }}
-          />
-        </div>
       </div>
 
       {/* 하단 버튼 */}
