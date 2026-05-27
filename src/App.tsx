@@ -368,7 +368,7 @@ function RegionDropdown({
 
   useEffect(() => {
     if (!open) return;
-    const handler = (e: MouseEvent) => {
+    const handler = (e: Event) => {
       const target = e.target as Node;
       if (containerRef.current && !containerRef.current.contains(target)) {
         setOpen(false);
