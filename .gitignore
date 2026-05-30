@@ -41,3 +41,6 @@ my-mini-app.ait
 
 # Claude Code 개인 설정
 .claude/
+keystore/
+.keystore-password.txt
+android/keystore.properties
